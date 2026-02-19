@@ -64,8 +64,10 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
      "WelcomePanelBody": "You have been given $Amount Credits to get started."
    }
    ```
-2. Run `/ea-gc-setup` in-game to create the currency and treasury.
+2. Run `/ea-gc-setup` in-game to create the currency and treasury (`CurrencyName - Treasury`).
 3. Use `/ea-gc-status` to verify everything is running.
+
+> If you are migrating from the GlobalCurrency mod, your existing `CurrencyName - Treasury` account will be recognized automatically.
 
 ## Example Usage
 

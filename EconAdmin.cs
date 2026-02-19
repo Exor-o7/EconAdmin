@@ -415,7 +415,7 @@ namespace Eco.Mods.EconAdmin
                 .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
 
             string currencyStatus = currency != null ? "Found" : "Not created yet — run /ea-gc-setup";
-            string treasuryName = cfg.GlobalCurrencyName + " Treasury";
+            string treasuryName = cfg.GlobalCurrencyName + " - Treasury";
 
             var treasury = BankAccountManager.Obj.Accounts
                 .FirstOrDefault(a => a != null && a.Name != null &&
@@ -472,7 +472,7 @@ namespace Eco.Mods.EconAdmin
             }
 
             // Create treasury account if missing
-            string treasuryName = cfg.GlobalCurrencyName + " Treasury";
+            string treasuryName = cfg.GlobalCurrencyName + " - Treasury";
             var treasury = BankAccountManager.Obj.Accounts
                 .FirstOrDefault(a => a != null && a.Name != null &&
                                      a.Name.Equals(treasuryName, StringComparison.OrdinalIgnoreCase));
@@ -558,7 +558,7 @@ namespace Eco.Mods.EconAdmin
                 return;
             }
 
-            string treasuryName = cfg.GlobalCurrencyName + " Treasury";
+            string treasuryName = cfg.GlobalCurrencyName + " - Treasury";
             var treasury = BankAccountManager.Obj.Accounts
                 .FirstOrDefault(a => a != null && a.Name != null &&
                                      a.Name.Equals(treasuryName, StringComparison.OrdinalIgnoreCase));
