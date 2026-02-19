@@ -17,10 +17,21 @@ A comprehensive admin toolkit for managing currencies and bank accounts on [ECO]
 
 ## Installation
 
-1. Drop `EconAdmin.cs` into your ECO server's `Mods/UserCode/` folder.
-2. Copy `EconAdmin.eco` into your server's `Configs/` folder.
-3. Edit `Configs/EconAdmin.eco` with your desired settings (see below).
-4. Restart the server — the mod will load the config automatically.
+Simply copy the contents of this repository into your ECO server's root directory. The folder structure mirrors the server layout exactly:
+
+```
+ServerRoot/
+├── Configs/
+│   └── EconAdmin.eco       ← config file
+└── Mods/
+    └── UserCode/
+        └── EconAdmin.cs    ← mod file
+```
+
+1. Copy `Configs/EconAdmin.eco` → your server's `Configs/` folder.
+2. Copy `Mods/UserCode/EconAdmin.cs` → your server's `Mods/UserCode/` folder.
+3. Edit `Configs/EconAdmin.eco` with your desired settings (see Global Currency Setup below).
+4. Restart the server — the mod will load automatically.
 5. Commands are available in-game to admins.
 
 ## Commands
