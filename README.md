@@ -10,6 +10,10 @@ A comprehensive admin toolkit for managing currencies and bank accounts on [ECO]
 - Wipe a specific currency from a specific account
 - Bulk purge currencies from **all** accounts using wildcard patterns
 - Preview wildcard matches before executing destructive operations
+- Global currency system: create a server-wide currency with a treasury account
+- Automatically gift new players a starting balance on first join
+- Configurable welcome popup panel for new players
+- Mint additional funds into the treasury at any time
 
 ## Installation
 
@@ -28,6 +32,10 @@ A comprehensive admin toolkit for managing currencies and bank accounts on [ECO]
 | `/ea-wipe <account> <currency>` | Remove ALL of a specific currency from one account |
 | `/ea-preview <pattern>` | Preview which currencies match a wildcard pattern |
 | `/ea-purge <pattern>` | **⚠ DANGEROUS** — Remove matching currencies from ALL accounts |
+| `/ea-gc-status` | Show global currency config and treasury status |
+| `/ea-gc-setup` | Create the global currency and treasury from config |
+| `/ea-gc-gift <account> [amount]` | Gift global currency to an account (defaults to configured gift amount) |
+| `/ea-gc-mint <amount>` | Mint additional global currency into the treasury |
 
 > All commands require **Admin** authorization.
 
@@ -44,6 +52,21 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
 
 **Always use `/ea-preview` before `/ea-purge` to verify what will be affected.**
 
+## Global Currency Setup
+
+1. Edit `Configs/EconAdmin.eco` on your server (auto-created on first run):
+   ```json
+   {
+     "GlobalCurrencyName": "Credits",
+     "NewPlayerGiftAmount": 500,
+     "TreasuryInitialBalance": 1000000,
+     "WelcomePanelTitle": "Welcome!",
+     "WelcomePanelBody": "You have been given $Amount Credits to get started."
+   }
+   ```
+2. Run `/ea-gc-setup` in-game to create the currency and treasury.
+3. Use `/ea-gc-status` to verify everything is running.
+
 ## Example Usage
 
 ```
@@ -53,6 +76,10 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
 /ea-adjust "PlayerName's Account" Credits 500
 /ea-preview *OldCoin*
 /ea-purge *OldCoin*
+/ea-gc-status
+/ea-gc-setup
+/ea-gc-gift "PlayerName's Account" 250
+/ea-gc-mint 50000
 ```
 
 ## License

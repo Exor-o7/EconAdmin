@@ -1,18 +1,94 @@
 // EconAdmin
 // A comprehensive admin toolkit for managing currencies and bank accounts on ECO servers
 // Author: Exor
-// Features: Currency/account listing, bulk operations, wildcard pattern matching
+// Features: Currency/account listing, bulk operations, wildcard pattern matching, global currency management
 
-using Eco.Gameplay.Players;
-using Eco.Shared.Localization;
-using Eco.Gameplay.Systems.Messaging.Chat.Commands;
+using Eco.Core.Plugins;
+using Eco.Core.Plugins.Interfaces;
+using Eco.Core.Utils;
 using Eco.Gameplay.Economy;
-using System.Linq;
+using Eco.Gameplay.Items;
+using Eco.Gameplay.Players;
+using Eco.Gameplay.Systems.Messaging.Chat.Commands;
+using Eco.Shared.Items;
+using Eco.Shared.Localization;
+using Eco.Shared.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Eco.Mods.EconAdmin
 {
+    // ----------------------------
+    // Global Currency Config
+    // ----------------------------
+
+    [Localized]
+    public class EconAdminConfig : Singleton<EconAdminConfig>
+    {
+        [LocDescription("Name of the global currency managed by EconAdmin.")]
+        public string GlobalCurrencyName { get; set; } = "";
+
+        [LocDescription("Amount of global currency gifted to players on their very first join. Set to 0 to disable.")]
+        public int NewPlayerGiftAmount { get; set; } = 0;
+
+        [LocDescription("Starting balance deposited into the treasury when it is first created via /ea-gc-setup.")]
+        public int TreasuryInitialBalance { get; set; } = 1000000;
+
+        [LocDescription("Title of the popup panel shown to new players receiving a starting gift. Leave empty to skip.")]
+        public string WelcomePanelTitle { get; set; } = "";
+
+        [LocDescription("Body text of the welcome panel. Use $Amount as a placeholder for the gift value.")]
+        public string WelcomePanelBody { get; set; } = "";
+    }
+
+    // ----------------------------
+    // EconAdmin Plugin
+    // ----------------------------
+
+    public class EconAdminPlugin : IModKitPlugin, IInitializablePlugin, IConfigurablePlugin
+    {
+        internal static PluginConfig<EconAdminConfig>? Config;
+        private string status = "Idle";
+
+        public IPluginConfig? PluginConfig => Config;
+        public ThreadSafeAction<object, string> ParamChanged { get; set; } = new ThreadSafeAction<object, string>();
+
+        public void Initialize(TimedTask timer)
+        {
+            Config = new PluginConfig<EconAdminConfig>("EconAdmin");
+            UserManager.NewUserJoinedEvent.Add(GrantNewPlayerGift);
+            this.status = "Running";
+        }
+
+        public override string ToString() => "EconAdmin";
+        public string GetStatus() => this.status;
+        public string GetCategory() => "EconAdmin";
+        public object? GetEditObject() => Config?.Config;
+        public void OnEditObjectChanged(object o, string param) { }
+
+        private static void GrantNewPlayerGift(User user)
+        {
+            if (Config?.Config == null) return;
+            var cfg = Config.Config;
+
+            if (cfg.NewPlayerGiftAmount <= 0 || string.IsNullOrEmpty(cfg.GlobalCurrencyName)) return;
+
+            var currency = CurrencyManager.Currencies
+                .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
+
+            if (currency == null) return;
+
+            BankAccountManager.Obj.SpawnMoney(currency, user, (float)cfg.NewPlayerGiftAmount);
+
+            if (user.Player != null && !string.IsNullOrEmpty(cfg.WelcomePanelTitle) && !string.IsNullOrEmpty(cfg.WelcomePanelBody))
+            {
+                var body = cfg.WelcomePanelBody.Replace("$Amount", cfg.NewPlayerGiftAmount.ToString());
+                user.Player.OpenInfoPanel(cfg.WelcomePanelTitle, body, "EconAdmin");
+            }
+        }
+    }
+
     [ChatCommandHandler]
     public class EconAdminCommands
     {
@@ -313,6 +389,192 @@ namespace Eco.Mods.EconAdmin
             }
             if (holdings.Count > 20)
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {holdings.Count - 20} more"));
+        }
+
+        // ----------------------------
+        // Global Currency Commands
+        // ----------------------------
+
+        [ChatCommand("Show global currency config and treasury status", "ea-gc-status", ChatAuthorizationLevel.Admin)]
+        public static void GlobalCurrencyStatus(User admin)
+        {
+            var cfg = EconAdminPlugin.Config?.Config;
+            if (cfg == null)
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] EconAdmin config not loaded."));
+                return;
+            }
+
+            if (string.IsNullOrEmpty(cfg.GlobalCurrencyName))
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] No global currency configured. Set GlobalCurrencyName in EconAdmin.eco config."));
+                return;
+            }
+
+            var currency = CurrencyManager.Currencies
+                .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
+
+            string currencyStatus = currency != null ? "Found" : "Not created yet — run /ea-gc-setup";
+            string treasuryName = cfg.GlobalCurrencyName + " Treasury";
+
+            var treasury = BankAccountManager.Obj.Accounts
+                .FirstOrDefault(a => a != null && a.Name != null &&
+                                     a.Name.Equals(treasuryName, StringComparison.OrdinalIgnoreCase));
+
+            string treasuryBalance = (treasury != null && currency != null)
+                ? treasury.GetCurrencyHoldingVal(currency).ToString("F2")
+                : "N/A";
+            string treasuryStatus = treasury != null
+                ? $"Found | Balance: {treasuryBalance}"
+                : "Not created yet — run /ea-gc-setup";
+
+            admin.TempServerMessage(Localizer.DoStr($"[EA] === Global Currency Status ==="));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Currency Name:   {cfg.GlobalCurrencyName}"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Currency:        {currencyStatus}"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury:        {treasuryStatus}"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] New Player Gift: {(cfg.NewPlayerGiftAmount > 0 ? cfg.NewPlayerGiftAmount.ToString("N0") : "Disabled")}"));
+        }
+
+        [ChatCommand("Create the global currency and treasury account defined in config", "ea-gc-setup", ChatAuthorizationLevel.Admin)]
+        public static void SetupGlobalCurrency(User admin)
+        {
+            var cfg = EconAdminPlugin.Config?.Config;
+            if (cfg == null)
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] EconAdmin config not loaded."));
+                return;
+            }
+
+            if (string.IsNullOrEmpty(cfg.GlobalCurrencyName))
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] GlobalCurrencyName is not set in your EconAdmin.eco config file."));
+                return;
+            }
+
+            // Create currency if missing
+            var currency = CurrencyManager.Currencies
+                .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
+
+            if (currency == null)
+            {
+                currency = CurrencyManager.AddCurrency(admin, cfg.GlobalCurrencyName, CurrencyType.Backed);
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Created currency: {cfg.GlobalCurrencyName}"));
+            }
+            else
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Currency '{cfg.GlobalCurrencyName}' already exists."));
+            }
+
+            if (currency != null && currency.BackingItem == null)
+            {
+                currency.BackingItem = new ClaimPaperItem();
+                currency.SaveInRegistrar();
+            }
+
+            // Create treasury account if missing
+            string treasuryName = cfg.GlobalCurrencyName + " Treasury";
+            var treasury = BankAccountManager.Obj.Accounts
+                .FirstOrDefault(a => a != null && a.Name != null &&
+                                     a.Name.Equals(treasuryName, StringComparison.OrdinalIgnoreCase));
+
+            if (treasury == null)
+            {
+                BankAccountManager.CreateAccount(admin, treasuryName);
+                treasury = BankAccountManager.Obj.Accounts
+                    .FirstOrDefault(a => a != null && a.Name != null &&
+                                         a.Name.Equals(treasuryName, StringComparison.OrdinalIgnoreCase));
+
+                if (treasury != null && currency != null)
+                {
+                    BankAccountManager.AddAccountManager(admin, treasury, admin);
+                    treasury.AddCurrency(currency, (float)cfg.TreasuryInitialBalance);
+                    admin.TempServerMessage(Localizer.DoStr($"[EA] Created treasury '{treasuryName}' with {cfg.TreasuryInitialBalance:N0} {cfg.GlobalCurrencyName}"));
+                }
+            }
+            else
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' already exists."));
+            }
+
+            admin.TempServerMessage(Localizer.DoStr("[EA] Setup complete. Use /ea-gc-status to verify."));
+        }
+
+        [ChatCommand("Manually gift global currency to an account. Defaults to configured gift amount if no amount given.", "ea-gc-gift", ChatAuthorizationLevel.Admin)]
+        public static void GiftGlobalCurrency(User admin, string accountName, int amount = 0)
+        {
+            var cfg = EconAdminPlugin.Config?.Config;
+            if (cfg == null || string.IsNullOrEmpty(cfg.GlobalCurrencyName))
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] Global currency is not configured."));
+                return;
+            }
+
+            var currency = CurrencyManager.Currencies
+                .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
+
+            if (currency == null)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc-setup first."));
+                return;
+            }
+
+            var account = BankAccountManager.Obj.Accounts
+                .FirstOrDefault(a => a != null && a.Name != null &&
+                                     a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
+
+            if (account == null)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found. Use /ea-accounts to search."));
+                return;
+            }
+
+            int giftAmount = amount > 0 ? amount : cfg.NewPlayerGiftAmount;
+            if (giftAmount <= 0)
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] No amount given and NewPlayerGiftAmount is 0. Provide an explicit amount."));
+                return;
+            }
+
+            account.AddCurrency(currency, (float)giftAmount);
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Gifted {giftAmount:N0} {cfg.GlobalCurrencyName} to '{account.Name}'"));
+        }
+
+        [ChatCommand("Mint additional global currency directly into the treasury account", "ea-gc-mint", ChatAuthorizationLevel.Admin)]
+        public static void MintToTreasury(User admin, int amount)
+        {
+            var cfg = EconAdminPlugin.Config?.Config;
+            if (cfg == null || string.IsNullOrEmpty(cfg.GlobalCurrencyName))
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] Global currency is not configured."));
+                return;
+            }
+
+            var currency = CurrencyManager.Currencies
+                .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
+
+            if (currency == null)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc-setup first."));
+                return;
+            }
+
+            string treasuryName = cfg.GlobalCurrencyName + " Treasury";
+            var treasury = BankAccountManager.Obj.Accounts
+                .FirstOrDefault(a => a != null && a.Name != null &&
+                                     a.Name.Equals(treasuryName, StringComparison.OrdinalIgnoreCase));
+
+            if (treasury == null)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' not found. Run /ea-gc-setup first."));
+                return;
+            }
+
+            var before = treasury.GetCurrencyHoldingVal(currency);
+            treasury.AddCurrency(currency, (float)amount);
+            var after = treasury.GetCurrencyHoldingVal(currency);
+
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Minted {amount:N0} {cfg.GlobalCurrencyName} into '{treasuryName}'"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury balance: {before:F2} → {after:F2}"));
         }
     }
 }
