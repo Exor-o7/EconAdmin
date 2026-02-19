@@ -18,8 +18,10 @@ A comprehensive admin toolkit for managing currencies and bank accounts on [ECO]
 ## Installation
 
 1. Drop `EconAdmin.cs` into your ECO server's `Mods/UserCode/` folder.
-2. Restart the server (or use a live-reload mod).
-3. Commands are available in-game to admins.
+2. Copy `EconAdmin.eco` into your server's `Configs/` folder.
+3. Edit `Configs/EconAdmin.eco` with your desired settings (see below).
+4. Restart the server — the mod will load the config automatically.
+5. Commands are available in-game to admins.
 
 ## Commands
 
@@ -54,17 +56,26 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
 
 ## Global Currency Setup
 
-1. Edit `Configs/EconAdmin.eco` on your server (auto-created on first run):
+1. Edit `Configs/EconAdmin.eco` (included in this repo) with your values:
    ```json
    {
-     "GlobalCurrencyName": "Credits",
+     "GlobalCurrencyName": "Gold",
+     "TreasuryAccountName": "",
      "NewPlayerGiftAmount": 500,
      "TreasuryInitialBalance": 1000000,
      "WelcomePanelTitle": "Welcome!",
-     "WelcomePanelBody": "You have been given $Amount Credits to get started."
+     "WelcomePanelBody": "You have been given $Amount Gold to get started!"
    }
    ```
-2. Run `/ea-gc-setup` in-game to create the currency and treasury (`CurrencyName - Treasury`).
+   | Field | Description |
+   |---|---|
+   | `GlobalCurrencyName` | Name of your server's global currency |
+   | `TreasuryAccountName` | Name of the treasury bank account. Leave empty to default to `CurrencyName - Treasury` |
+   | `NewPlayerGiftAmount` | Amount gifted to new players on first join. Set to `0` to disable |
+   | `TreasuryInitialBalance` | Funds seeded into the treasury when created via `/ea-gc-setup` |
+   | `WelcomePanelTitle` | Title of the welcome popup. Leave empty to skip |
+   | `WelcomePanelBody` | Body of the welcome popup. Use `$Amount` as a placeholder for the gift value |
+2. Place the server and run `/ea-gc-setup` in-game to create the currency and treasury.
 3. Use `/ea-gc-status` to verify everything is running.
 
 > If you are migrating from the GlobalCurrency mod, your existing `CurrencyName - Treasury` account will be recognized automatically.
