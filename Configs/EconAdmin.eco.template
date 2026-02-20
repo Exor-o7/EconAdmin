@@ -3,6 +3,6 @@
   "TreasuryAccountName": "Global Currency",
   "NewPlayerGiftAmount": 500,
   "TreasuryInitialBalance": 1000000,
-  "WelcomePanelTitle": "Title",
-  "WelcomePanelBody": "Body"
+  "WelcomePanelTitle": "Welcome!",
+  "WelcomePanelBody": "You have been given $Amount Gold to get started!"
 }
