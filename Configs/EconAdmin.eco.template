@@ -1,6 +1,6 @@
 {
   "GlobalCurrencyName": "Gold",
-  "TreasuryAccountName": "Global Currency",
+  "TreasuryAccountName": "",
   "NewPlayerGiftAmount": 500,
   "TreasuryInitialBalance": 1000000,
   "WelcomePanelTitle": "Welcome!",
