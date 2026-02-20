@@ -250,10 +250,10 @@ namespace Eco.Mods.EconAdmin
         // Master Commands
         // ----------------------------
 
-        [ChatCommand("EconAdmin - Economy administration toolkit", "ea")]
+        [ChatCommand("EconAdmin", "ea")]
         public static void EconAdmin() { }
 
-        [ChatCommand("EconAdmin - Global currency management", "ea-gc")]
+        [ChatCommand("EconAdminGC", "ea-gc")]
         public static void EconAdminGC() { }
 
         // ----------------------------
