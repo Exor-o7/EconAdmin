@@ -118,14 +118,22 @@ namespace Eco.Mods.EconAdmin
         private static string StripQuotes(string s) => s.Trim().Trim('"').Trim();
 
         /// <summary>
-        /// Resolve a bank account by exact name, then partial/contains match.
+        /// Resolve a bank account by numeric ID, exact name, or partial/contains match.
         /// Prints an error or ambiguity message and returns null if unresolved.
-        /// Handles ECO's whitespace-tokenised input by accepting a unique fragment of the name.
         /// </summary>
         private static BankAccount? ResolveAccount(User admin, string search)
         {
             search = StripQuotes(search);
             if (string.IsNullOrWhiteSpace(search)) return null;
+
+            // Try numeric ID lookup first
+            if (int.TryParse(search, out int id))
+            {
+                var byId = BankAccountManager.Obj.Accounts.FirstOrDefault(a => a != null && a.Id == id);
+                if (byId != null) return byId;
+                admin.TempServerMessage(Localizer.DoStr($"[EA] No account found with ID {id}."));
+                return null;
+            }
 
             var exact = BankAccountManager.Obj.Accounts
                 .FirstOrDefault(a => a != null && a.Name != null &&
@@ -144,20 +152,29 @@ namespace Eco.Mods.EconAdmin
             }
             if (matches.Count == 1) return matches[0];
 
-            admin.TempServerMessage(Localizer.DoStr($"[EA] '{search}' matches {matches.Count} accounts — be more specific:"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] '{search}' matches {matches.Count} accounts — use the ID# or be more specific:"));
             foreach (var a in matches.Take(10))
-                admin.TempServerMessage(Localizer.DoStr($"  • {a.Name}"));
+                admin.TempServerMessage(Localizer.DoStr($"  • [{a.Id}] {a.Name}"));
             return null;
         }
 
         /// <summary>
-        /// Resolve a currency by exact name, then partial/contains match.
+        /// Resolve a currency by numeric ID, exact name, or partial/contains match.
         /// Prints an error or ambiguity message and returns null if unresolved.
         /// </summary>
         private static Currency? ResolveCurrency(User admin, string search)
         {
             search = StripQuotes(search);
             if (string.IsNullOrWhiteSpace(search)) return null;
+
+            // Try numeric ID lookup first
+            if (int.TryParse(search, out int id))
+            {
+                var byId = CurrencyManager.Currencies.FirstOrDefault(c => c != null && c.Id == id);
+                if (byId != null) return byId;
+                admin.TempServerMessage(Localizer.DoStr($"[EA] No currency found with ID {id}."));
+                return null;
+            }
 
             var exact = CurrencyManager.Currencies
                 .FirstOrDefault(c => c != null && c.Name != null &&
@@ -176,9 +193,9 @@ namespace Eco.Mods.EconAdmin
             }
             if (matches.Count == 1) return matches[0];
 
-            admin.TempServerMessage(Localizer.DoStr($"[EA] '{search}' matches {matches.Count} currencies — be more specific:"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] '{search}' matches {matches.Count} currencies — use the ID# or be more specific:"));
             foreach (var c in matches.Take(10))
-                admin.TempServerMessage(Localizer.DoStr($"  • {c.Name}"));
+                admin.TempServerMessage(Localizer.DoStr($"  • [{c.Id}] {c.Name}"));
             return null;
         }
 
@@ -270,7 +287,6 @@ namespace Eco.Mods.EconAdmin
                             (string.IsNullOrEmpty(search) ||
                              a.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0))
                 .Take(100)
-                .Select(a => a.Name)
                 .ToList();
 
             if (accounts.Count == 0)
@@ -280,8 +296,8 @@ namespace Eco.Mods.EconAdmin
             }
 
             admin.TempServerMessage(Localizer.DoStr($"[EA] Found {accounts.Count} account(s):"));
-            foreach (var accountName in accounts)
-                admin.TempServerMessage(Localizer.DoStr($"  • {accountName}"));
+            foreach (var a in accounts)
+                admin.TempServerMessage(Localizer.DoStr($"  • [{a.Id}] {a.Name}"));
         }
 
         [ChatSubCommand("Ea", "List all currencies in the system (optional: filter)", "currencies", ChatAuthorizationLevel.Admin)]
@@ -301,7 +317,7 @@ namespace Eco.Mods.EconAdmin
 
             admin.TempServerMessage(Localizer.DoStr($"[EA] Total: {currencies.Count} currencies"));
             foreach (var curr in currencies.Take(100))
-                admin.TempServerMessage(Localizer.DoStr($"  • {curr.Name}"));
+                admin.TempServerMessage(Localizer.DoStr($"  • [{curr.Id}] {curr.Name}"));
             if (currencies.Count > 100)
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {currencies.Count - 100} more"));
         }
@@ -311,8 +327,8 @@ namespace Eco.Mods.EconAdmin
         {
             if (string.IsNullOrWhiteSpace(accountName))
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea balance <accountName>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the name, e.g. /ea balance Exor"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea balance <accountName|id>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea balance 42"));
                 return;
             }
 
@@ -343,8 +359,9 @@ namespace Eco.Mods.EconAdmin
         {
             if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount <= 0)
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <accountName> <currencyName> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Example: /ea add Exor Gold 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <accountName|id> <currencyName> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea add 42 Gold 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use currency ID from /ea currencies, e.g. /ea add 42 7 550000"));
                 return;
             }
 
@@ -367,8 +384,9 @@ namespace Eco.Mods.EconAdmin
         {
             if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount <= 0)
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <accountName> <currencyName> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Example: /ea deduct Exor Gold 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <accountName|id> <currencyName> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea deduct 42 Gold 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use currency ID from /ea currencies, e.g. /ea deduct 42 7 550000"));
                 return;
             }
 
@@ -391,8 +409,9 @@ namespace Eco.Mods.EconAdmin
         {
             if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea wipe <accountName> <currencyName>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the name, e.g. /ea wipe Exor Gold"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea wipe <accountName|id> <currencyName>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea wipe 42 Gold"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use currency ID from /ea currencies, e.g. /ea wipe 42 7"));
                 return;
             }
 
@@ -600,8 +619,8 @@ namespace Eco.Mods.EconAdmin
         {
             if (string.IsNullOrWhiteSpace(accountName))
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <accountName> [amount]"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the account name, e.g. /eagc gift Exor"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <accountName|id> [amount]"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /eagc gift 42"));
                 return;
             }
 
