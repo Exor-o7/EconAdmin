@@ -277,7 +277,7 @@ namespace Eco.Mods.EconAdmin
         // ea subcommands
         // ----------------------------
 
-        [ChatSubCommand("Ea", "List all bank accounts (optional: search filter)", "accounts", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("Ea", "List all bank accounts (optional: search filter)", "accts", ChatAuthorizationLevel.Admin)]
         public static void Accounts(User admin, string search = "")
         {
             search = search ?? string.Empty;
@@ -328,7 +328,7 @@ namespace Eco.Mods.EconAdmin
             if (string.IsNullOrWhiteSpace(accountName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea balance <accountName|id>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea balance 42"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accts, e.g. /ea balance 42"));
                 return;
             }
 
@@ -355,13 +355,17 @@ namespace Eco.Mods.EconAdmin
         }
 
         [ChatSubCommand("Ea", "Add currency to an account.", "add", ChatAuthorizationLevel.Admin)]
-        public static void Add(User admin, string accountName = "", string currencyName = "", float amount = 0)
+        public static void Add(User admin, string accountName = "", string currencyName = "", string amountStr = "")
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount <= 0)
+            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || string.IsNullOrWhiteSpace(amountStr))
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <accountName|id> <currencyName> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea add 42 Gold 550000"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use currency ID from /ea currencies, e.g. /ea add 42 7 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <accountName|id> <currencyName|id> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea add 42 7 550000"));
+                return;
+            }
+            if (!float.TryParse(amountStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Invalid amount '{amountStr}' — must be a positive number."));
                 return;
             }
 
@@ -380,13 +384,17 @@ namespace Eco.Mods.EconAdmin
         }
 
         [ChatSubCommand("Ea", "Deduct currency from an account.", "deduct", ChatAuthorizationLevel.Admin)]
-        public static void Deduct(User admin, string accountName = "", string currencyName = "", float amount = 0)
+        public static void Deduct(User admin, string accountName = "", string currencyName = "", string amountStr = "")
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount <= 0)
+            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || string.IsNullOrWhiteSpace(amountStr))
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <accountName|id> <currencyName> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea deduct 42 Gold 550000"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use currency ID from /ea currencies, e.g. /ea deduct 42 7 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <accountName|id> <currencyName|id> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea deduct 42 7 550000"));
+                return;
+            }
+            if (!float.TryParse(amountStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Invalid amount '{amountStr}' — must be a positive number."));
                 return;
             }
 
@@ -410,7 +418,7 @@ namespace Eco.Mods.EconAdmin
             if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea wipe <accountName|id> <currencyName>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea wipe 42 Gold"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accts, e.g. /ea wipe 42 Gold"));
                 admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use currency ID from /ea currencies, e.g. /ea wipe 42 7"));
                 return;
             }
@@ -620,7 +628,7 @@ namespace Eco.Mods.EconAdmin
             if (string.IsNullOrWhiteSpace(accountName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <accountName|id> [amount]"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /eagc gift 42"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accts, e.g. /eagc gift 42"));
                 return;
             }
 
