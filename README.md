@@ -22,13 +22,14 @@ Simply copy the contents of this repository into your ECO server's root director
 ```
 ServerRoot/
 ├── Configs/
-│   └── EconAdmin.eco       ← config file
+│   └── EconAdmin.eco.template  ← rename to EconAdmin.eco and configure
 └── Mods/
     └── UserCode/
-        └── EconAdmin.cs    ← mod file
+        └── EconAdmin.cs        ← mod file
 ```
 
-1. Copy `Configs/EconAdmin.eco` → your server's `Configs/` folder.
+1. Copy `Configs/EconAdmin.eco.template` → your server's `Configs/` folder and **rename it to `EconAdmin.eco`**.
+   > Alternatively, skip this step — the server will auto-generate `EconAdmin.eco` with default values on first start.
 2. Copy `Mods/UserCode/EconAdmin.cs` → your server's `Mods/UserCode/` folder.
 3. Edit `Configs/EconAdmin.eco` with your desired settings (see Global Currency Setup below).
 4. Restart the server — the mod will load automatically.
@@ -36,19 +37,28 @@ ServerRoot/
 
 ## Commands
 
+All commands are grouped under two master commands:
+
+### `/ea` — General economy administration
+
 | Command | Description |
 |---|---|
-| `/ea-accounts [search]` | List all bank accounts, with optional search filter |
-| `/ea-currencies [filter]` | List all currencies, with optional filter |
-| `/ea-balance <account>` | Show all currency holdings for an account |
-| `/ea-adjust <account> <currency> <amount>` | Add or remove currency from an account (use negative to remove) |
-| `/ea-wipe <account> <currency>` | Remove ALL of a specific currency from one account |
-| `/ea-preview <pattern>` | Preview which currencies match a wildcard pattern |
-| `/ea-purge <pattern>` | **⚠ DANGEROUS** — Remove matching currencies from ALL accounts |
-| `/ea-gc-status` | Show global currency config and treasury status |
-| `/ea-gc-setup` | Create the global currency and treasury from config |
-| `/ea-gc-gift <account> [amount]` | Gift global currency to an account (defaults to configured gift amount) |
-| `/ea-gc-mint <amount>` | Mint additional global currency into the treasury |
+| `/ea accounts [search]` | List all bank accounts, with optional search filter |
+| `/ea currencies [filter]` | List all currencies, with optional filter |
+| `/ea balance <account>` | Show all currency holdings for an account |
+| `/ea adjust <account> <currency> <amount>` | Add or remove currency from an account (use negative to remove) |
+| `/ea wipe <account> <currency>` | Remove ALL of a specific currency from one account |
+| `/ea preview <pattern>` | Preview which currencies match a wildcard pattern |
+| `/ea purge <pattern>` | **⚠ DANGEROUS** — Remove matching currencies from ALL accounts |
+
+### `/ea-gc` — Global currency management
+
+| Command | Description |
+|---|---|
+| `/ea-gc status` | Show global currency config and treasury status |
+| `/ea-gc setup` | Create the global currency and treasury from config |
+| `/ea-gc gift <account> [amount]` | Gift global currency to an account (defaults to configured gift amount) |
+| `/ea-gc mint <amount>` | Mint additional global currency into the treasury |
 
 > All commands require **Admin** authorization.
 
@@ -67,7 +77,7 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
 
 ## Global Currency Setup
 
-1. Edit `Configs/EconAdmin.eco` (included in this repo) with your values:
+1. Edit `Configs/EconAdmin.eco` (rename from `EconAdmin.eco.template`) with your values:
    ```json
    {
      "GlobalCurrencyName": "Gold",
@@ -86,24 +96,24 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
    | `TreasuryInitialBalance` | Funds seeded into the treasury when created via `/ea-gc-setup` |
    | `WelcomePanelTitle` | Title of the welcome popup. Leave empty to skip |
    | `WelcomePanelBody` | Body of the welcome popup. Use `$Amount` as a placeholder for the gift value |
-2. Place the server and run `/ea-gc-setup` in-game to create the currency and treasury.
-3. Use `/ea-gc-status` to verify everything is running.
+2. Place the files on the server and run `/ea-gc setup` in-game to create the currency and treasury.
+3. Use `/ea-gc status` to verify everything is running.
 
 > If you are migrating from the GlobalCurrency mod, your existing `CurrencyName - Treasury` account will be recognized automatically.
 
 ## Example Usage
 
 ```
-/ea-currencies
-/ea-accounts PlayerName
-/ea-balance "PlayerName's Account"
-/ea-adjust "PlayerName's Account" Credits 500
-/ea-preview *OldCoin*
-/ea-purge *OldCoin*
-/ea-gc-status
-/ea-gc-setup
-/ea-gc-gift "PlayerName's Account" 250
-/ea-gc-mint 50000
+/ea currencies
+/ea accounts PlayerName
+/ea balance "PlayerName's Account"
+/ea adjust "PlayerName's Account" Credits 500
+/ea preview *OldCoin*
+/ea purge *OldCoin*
+/ea-gc status
+/ea-gc setup
+/ea-gc gift "PlayerName's Account" 250
+/ea-gc mint 50000
 ```
 
 ## License

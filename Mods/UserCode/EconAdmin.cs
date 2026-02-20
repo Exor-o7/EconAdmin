@@ -106,11 +106,11 @@ namespace Eco.Mods.EconAdmin
         // ----------------------------
         // Helper Methods
         // ----------------------------
-        
+
         /// <summary>Get a currency by exact name match</summary>
         private static Currency? GetCurrencyByName(string currencyName)
         {
-            return CurrencyManager.Currencies.FirstOrDefault(c => c != null && 
+            return CurrencyManager.Currencies.FirstOrDefault(c => c != null &&
                 c.Name.Equals(currencyName, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -118,15 +118,15 @@ namespace Eco.Mods.EconAdmin
         private static bool MatchesWildcard(string currencyName, string pattern)
         {
             int starCount = pattern.Count(c => c == '*');
-            
+
             if (starCount == 0)
                 return currencyName.Equals(pattern, StringComparison.OrdinalIgnoreCase);
-            
+
             if (starCount == 1)
             {
                 int starPos = pattern.IndexOf('*');
-                
-                // *suffix (matches anything ending with suffix)
+
+                // *suffix
                 if (starPos == 0)
                 {
                     string suffix = pattern.Substring(1).TrimStart();
@@ -134,8 +134,8 @@ namespace Eco.Mods.EconAdmin
                         return true;
                     return currencyName.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
                 }
-                
-                // prefix* (matches anything starting with prefix)
+
+                // prefix*
                 if (starPos == pattern.Length - 1)
                 {
                     string prefix = pattern.Substring(0, pattern.Length - 1).TrimEnd();
@@ -143,23 +143,23 @@ namespace Eco.Mods.EconAdmin
                         return true;
                     return currencyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
                 }
-                
-                // prefix*suffix (matches prefix + anything + suffix)
+
+                // prefix*suffix
                 string prefixPart = pattern.Substring(0, starPos);
                 string suffixPart = pattern.Substring(starPos + 1);
                 return currencyName.StartsWith(prefixPart, StringComparison.OrdinalIgnoreCase) &&
                        currencyName.EndsWith(suffixPart, StringComparison.OrdinalIgnoreCase) &&
                        currencyName.Length >= prefixPart.Length + suffixPart.Length;
             }
-            
+
             if (starCount == 2 && pattern.StartsWith("*") && pattern.EndsWith("*"))
             {
-                // *contains* (matches anything containing text)
+                // *contains*
                 string contains = pattern.Substring(1, pattern.Length - 2).Trim();
                 return currencyName.IndexOf(contains, StringComparison.OrdinalIgnoreCase) >= 0;
             }
-            
-            // Fallback for complex patterns
+
+            // Fallback
             string simplified = pattern.Replace("*", "").Trim();
             return currencyName.IndexOf(simplified, StringComparison.OrdinalIgnoreCase) >= 0;
         }
@@ -179,17 +179,27 @@ namespace Eco.Mods.EconAdmin
         }
 
         // ----------------------------
-        // Commands
+        // Master Commands
         // ----------------------------
 
-        [ChatCommand("List all bank accounts (optional: search filter)", "ea-accounts", ChatAuthorizationLevel.Admin)]
+        [ChatCommand("EconAdmin - Economy administration toolkit", "ea")]
+        public static void EconAdmin() { }
+
+        [ChatCommand("EconAdmin - Global currency management", "ea-gc")]
+        public static void EconAdminGC() { }
+
+        // ----------------------------
+        // ea subcommands
+        // ----------------------------
+
+        [ChatSubCommand("EconAdmin", "List all bank accounts (optional: search filter)", "accounts", ChatAuthorizationLevel.Admin)]
         public static void ListAccounts(User admin, string search = "")
         {
             search = search ?? string.Empty;
-            
+
             var accounts = BankAccountManager.Obj.Accounts
                 .Where(a => a != null && a.Name != null &&
-                            (string.IsNullOrEmpty(search) || 
+                            (string.IsNullOrEmpty(search) ||
                              a.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0))
                 .Take(100)
                 .Select(a => a.Name)
@@ -203,20 +213,18 @@ namespace Eco.Mods.EconAdmin
 
             admin.TempServerMessage(Localizer.DoStr($"[EA] Found {accounts.Count} account(s):"));
             foreach (var accountName in accounts)
-            {
                 admin.TempServerMessage(Localizer.DoStr($"  • {accountName}"));
-            }
         }
 
-        [ChatCommand("List all currencies in the system", "ea-currencies", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdmin", "List all currencies in the system (optional: filter)", "currencies", ChatAuthorizationLevel.Admin)]
         public static void ListAllCurrencies(User admin, string filter = "")
         {
             var currencies = CurrencyManager.Currencies
                 .Where(c => c != null && c.Name != null &&
-                           (string.IsNullOrEmpty(filter) || 
+                           (string.IsNullOrEmpty(filter) ||
                             c.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
                 .ToList();
-            
+
             if (currencies.Count == 0)
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] No currencies found."));
@@ -225,21 +233,51 @@ namespace Eco.Mods.EconAdmin
 
             admin.TempServerMessage(Localizer.DoStr($"[EA] Total: {currencies.Count} currencies"));
             foreach (var curr in currencies.Take(100))
-            {
                 admin.TempServerMessage(Localizer.DoStr($"  • {curr.Name}"));
-            }
             if (currencies.Count > 100)
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {currencies.Count - 100} more"));
         }
 
-        [ChatCommand("Add/remove currency amount to/from an account. Use negative to remove (ex: /ea-adjust PlayerName CurrencyName -500)", "ea-adjust", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdmin", "Show all currency holdings for an account", "balance", ChatAuthorizationLevel.Admin)]
+        public static void GetAccountBalance(User admin, string accountName)
+        {
+            var account = BankAccountManager.Obj.Accounts
+                .FirstOrDefault(a => a != null && a.Name != null &&
+                                     a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
+
+            if (account == null)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found."));
+                return;
+            }
+
+            var holdings = account.CurrencyHoldings
+                .Where(h => h.Key != null && h.Value != null && h.Value.Val > 0)
+                .OrderByDescending(h => h.Value.Val)
+                .ToList();
+
+            if (holdings.Count == 0)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{account.Name}' has no currency."));
+                return;
+            }
+
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name}"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Holdings ({holdings.Count} currencies):"));
+            foreach (var holding in holdings.Take(20))
+                admin.TempServerMessage(Localizer.DoStr($"  • {holding.Value.Val:F2} {holding.Key.Name}"));
+            if (holdings.Count > 20)
+                admin.TempServerMessage(Localizer.DoStr($"  ... and {holdings.Count - 20} more"));
+        }
+
+        [ChatSubCommand("EconAdmin", "Add or remove currency from an account. Use negative amount to remove.", "adjust", ChatAuthorizationLevel.Admin)]
         public static void ModifyAccountCurrency(User admin, string accountName, string currencyName, float amount)
         {
             var currency = GetCurrencyByName(currencyName);
             if (currency == null)
             {
                 admin.TempServerMessage(Localizer.DoStr($"[EA] Currency '{currencyName}' not found."));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Use /ea-currencies to see all currencies."));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Use /ea currencies to see all currencies."));
                 return;
             }
 
@@ -250,7 +288,7 @@ namespace Eco.Mods.EconAdmin
             if (account == null)
             {
                 admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found."));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Use /ea-accounts to search for accounts."));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Use /ea accounts to search for accounts."));
                 return;
             }
 
@@ -263,7 +301,7 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name} | Before: {currentBalance:F2} → After: {newBalance:F2}"));
         }
 
-        [ChatCommand("Remove ALL of a specific currency from one account", "ea-wipe", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdmin", "Remove ALL of a specific currency from one account", "wipe", ChatAuthorizationLevel.Admin)]
         public static void WipeCurrencyFromAccount(User admin, string accountName, string currencyName)
         {
             var currency = GetCurrencyByName(currencyName);
@@ -294,32 +332,30 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Wiped {balance:F2} {currency.Name} from '{account.Name}'"));
         }
 
-        [ChatCommand("Preview currencies that match pattern. Supports wildcards: *Credit, Player*, *Old* (ex: /ea-preview *Credit)", "ea-preview", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdmin", "Preview currencies matching a wildcard pattern (* wildcard). Ex: /ea preview *Credit", "preview", ChatAuthorizationLevel.Admin)]
         public static void PreviewCurrencyPattern(User admin, string pattern)
         {
             var currencies = GetCurrenciesByPattern(pattern);
-            
+
             if (currencies.Count == 0)
             {
                 admin.TempServerMessage(Localizer.DoStr($"[EA] No currencies match pattern: '{pattern}'"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: Use * wildcard - examples: *Credit, Test*, *Old*"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: Use * wildcard — examples: *Credit, Test*, *Old*"));
                 return;
             }
 
             admin.TempServerMessage(Localizer.DoStr($"[EA] Pattern '{pattern}' matches {currencies.Count} currencies:"));
             foreach (var curr in currencies.Take(30))
-            {
                 admin.TempServerMessage(Localizer.DoStr($"  • {curr.Name}"));
-            }
             if (currencies.Count > 30)
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {currencies.Count - 30} more"));
         }
 
-        [ChatCommand("DANGER: Remove matching currencies from ALL accounts. Preview with /ea-preview first! (ex: /ea-purge *Credit)", "ea-purge", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdmin", "DANGER: Remove matching currencies from ALL accounts. Preview first with /ea preview!", "purge", ChatAuthorizationLevel.Admin)]
         public static void PurgeCurrencies(User admin, string pattern)
         {
             var currencies = GetCurrenciesByPattern(pattern);
-            
+
             if (currencies.Count == 0)
             {
                 admin.TempServerMessage(Localizer.DoStr($"[EA] No currencies match pattern: '{pattern}'"));
@@ -352,15 +388,12 @@ namespace Eco.Mods.EconAdmin
                 {
                     totalAccountsAffected += accountsModified;
                     totalAmountRemoved += amountRemoved;
-                    
                     admin.TempServerMessage(Localizer.DoStr($"  • {currency.Name}: {amountRemoved:F2} removed from {accountsModified} accounts"));
                 }
             }
 
             if (totalAccountsAffected == 0)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] No balances found to remove."));
-            }
+                admin.TempServerMessage(Localizer.DoStr("[EA] No balances found to remove."));
             else
             {
                 admin.TempServerMessage(Localizer.DoStr($"[EA] ✓ Complete: {currencies.Count} currencies purged"));
@@ -368,45 +401,11 @@ namespace Eco.Mods.EconAdmin
             }
         }
 
-        [ChatCommand("Get detailed balance info for an account", "ea-balance", ChatAuthorizationLevel.Admin)]
-        public static void GetAccountBalance(User admin, string accountName)
-        {
-            var account = BankAccountManager.Obj.Accounts
-                .FirstOrDefault(a => a != null && a.Name != null &&
-                                     a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
-
-            if (account == null)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found."));
-                return;
-            }
-
-            var holdings = account.CurrencyHoldings
-                .Where(h => h.Key != null && h.Value != null && h.Value.Val > 0)
-                .OrderByDescending(h => h.Value.Val)
-                .ToList();
-
-            if (holdings.Count == 0)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{account.Name}' has no currency."));
-                return;
-            }
-
-            admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name}"));
-            admin.TempServerMessage(Localizer.DoStr($"[EA] Holdings ({holdings.Count} currencies):"));
-            foreach (var holding in holdings.Take(20))
-            {
-                admin.TempServerMessage(Localizer.DoStr($"  • {holding.Value.Val:F2} {holding.Key.Name}"));
-            }
-            if (holdings.Count > 20)
-                admin.TempServerMessage(Localizer.DoStr($"  ... and {holdings.Count - 20} more"));
-        }
-
         // ----------------------------
-        // Global Currency Commands
+        // ea-gc subcommands
         // ----------------------------
 
-        [ChatCommand("Show global currency config and treasury status", "ea-gc-status", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdminGC", "Show global currency config and treasury status", "status", ChatAuthorizationLevel.Admin)]
         public static void GlobalCurrencyStatus(User admin)
         {
             var cfg = EconAdminPlugin.Config?.Config;
@@ -425,7 +424,7 @@ namespace Eco.Mods.EconAdmin
             var currency = CurrencyManager.Currencies
                 .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
 
-            string currencyStatus = currency != null ? "Found" : "Not created yet — run /ea-gc-setup";
+            string currencyStatus = currency != null ? "Found" : "Not created yet — run /ea-gc setup";
             string treasuryName = EconAdminPlugin.ResolveTreasuryName(cfg);
 
             var treasury = BankAccountManager.Obj.Accounts
@@ -433,20 +432,19 @@ namespace Eco.Mods.EconAdmin
                                      a.Name.Equals(treasuryName, StringComparison.OrdinalIgnoreCase));
 
             string treasuryBalance = (treasury != null && currency != null)
-                ? treasury.GetCurrencyHoldingVal(currency).ToString("F2")
-                : "N/A";
+                ? treasury.GetCurrencyHoldingVal(currency).ToString("F2") : "N/A";
             string treasuryStatus = treasury != null
                 ? $"Found | Balance: {treasuryBalance}"
-                : "Not created yet — run /ea-gc-setup";
+                : "Not created yet — run /ea-gc setup";
 
-            admin.TempServerMessage(Localizer.DoStr($"[EA] === Global Currency Status ==="));
+            admin.TempServerMessage(Localizer.DoStr("[EA] === Global Currency Status ==="));
             admin.TempServerMessage(Localizer.DoStr($"[EA] Currency Name:   {cfg.GlobalCurrencyName}"));
             admin.TempServerMessage(Localizer.DoStr($"[EA] Currency:        {currencyStatus}"));
             admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury:        {treasuryStatus}"));
             admin.TempServerMessage(Localizer.DoStr($"[EA] New Player Gift: {(cfg.NewPlayerGiftAmount > 0 ? cfg.NewPlayerGiftAmount.ToString("N0") : "Disabled")}"));
         }
 
-        [ChatCommand("Create the global currency and treasury account defined in config", "ea-gc-setup", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdminGC", "Create the global currency and treasury account defined in config", "setup", ChatAuthorizationLevel.Admin)]
         public static void SetupGlobalCurrency(User admin)
         {
             var cfg = EconAdminPlugin.Config?.Config;
@@ -462,7 +460,6 @@ namespace Eco.Mods.EconAdmin
                 return;
             }
 
-            // Create currency if missing
             var currency = CurrencyManager.Currencies
                 .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
 
@@ -472,9 +469,7 @@ namespace Eco.Mods.EconAdmin
                 admin.TempServerMessage(Localizer.DoStr($"[EA] Created currency: {cfg.GlobalCurrencyName}"));
             }
             else
-            {
                 admin.TempServerMessage(Localizer.DoStr($"[EA] Currency '{cfg.GlobalCurrencyName}' already exists."));
-            }
 
             if (currency != null && currency.BackingItem == null)
             {
@@ -482,7 +477,6 @@ namespace Eco.Mods.EconAdmin
                 currency.SaveInRegistrar();
             }
 
-            // Create treasury account if missing
             string treasuryName = EconAdminPlugin.ResolveTreasuryName(cfg);
             var treasury = BankAccountManager.Obj.Accounts
                 .FirstOrDefault(a => a != null && a.Name != null &&
@@ -503,14 +497,12 @@ namespace Eco.Mods.EconAdmin
                 }
             }
             else
-            {
                 admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' already exists."));
-            }
 
-            admin.TempServerMessage(Localizer.DoStr("[EA] Setup complete. Use /ea-gc-status to verify."));
+            admin.TempServerMessage(Localizer.DoStr("[EA] Setup complete. Use /ea-gc status to verify."));
         }
 
-        [ChatCommand("Manually gift global currency to an account. Defaults to configured gift amount if no amount given.", "ea-gc-gift", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdminGC", "Gift global currency to an account. Defaults to configured gift amount if no amount given.", "gift", ChatAuthorizationLevel.Admin)]
         public static void GiftGlobalCurrency(User admin, string accountName, int amount = 0)
         {
             var cfg = EconAdminPlugin.Config?.Config;
@@ -525,7 +517,7 @@ namespace Eco.Mods.EconAdmin
 
             if (currency == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc-setup first."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc setup first."));
                 return;
             }
 
@@ -535,7 +527,7 @@ namespace Eco.Mods.EconAdmin
 
             if (account == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found. Use /ea-accounts to search."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found. Use /ea accounts to search."));
                 return;
             }
 
@@ -550,7 +542,7 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Gifted {giftAmount:N0} {cfg.GlobalCurrencyName} to '{account.Name}'"));
         }
 
-        [ChatCommand("Mint additional global currency directly into the treasury account", "ea-gc-mint", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdminGC", "Mint additional global currency directly into the treasury account", "mint", ChatAuthorizationLevel.Admin)]
         public static void MintToTreasury(User admin, int amount)
         {
             var cfg = EconAdminPlugin.Config?.Config;
@@ -565,7 +557,7 @@ namespace Eco.Mods.EconAdmin
 
             if (currency == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc-setup first."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc setup first."));
                 return;
             }
 
@@ -576,7 +568,7 @@ namespace Eco.Mods.EconAdmin
 
             if (treasury == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' not found. Run /ea-gc-setup first."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' not found. Run /ea-gc setup first."));
                 return;
             }
 
