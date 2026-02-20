@@ -250,10 +250,10 @@ namespace Eco.Mods.EconAdmin
         // Master Commands
         // ----------------------------
 
-        [ChatCommand("Economy administration toolkit")]
+        [ChatCommand("Economy administration toolkit", ChatAuthorizationLevel.Admin)]
         public static void Ea(User user) { }
 
-        [ChatCommand("Global currency management")]
+        [ChatCommand("Global currency management", ChatAuthorizationLevel.Admin)]
         public static void EaGc(User user) { }
 
         // ----------------------------
@@ -312,6 +312,7 @@ namespace Eco.Mods.EconAdmin
             if (string.IsNullOrWhiteSpace(accountName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea balance <accountName>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the name, e.g. /ea balance Exor"));
                 return;
             }
 
@@ -340,10 +341,11 @@ namespace Eco.Mods.EconAdmin
         [ChatSubCommand("Ea", "Add or remove currency from an account. Use negative amount to remove.", "adjust", ChatAuthorizationLevel.Admin)]
         public static void Adjust(User admin, string accountName = "", string currencyName = "", float amount = 0)
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
+            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount == 0)
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea adjust <accountName> <currencyName> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use a unique word from the name if it contains spaces, e.g. /ea adjust Exor Gold -550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the name, not quotes."));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Example: /ea adjust Exor Gold -550000"));
                 return;
             }
 
@@ -368,6 +370,7 @@ namespace Eco.Mods.EconAdmin
             if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea wipe <accountName> <currencyName>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the name, e.g. /ea wipe Exor Gold"));
                 return;
             }
 
@@ -576,6 +579,7 @@ namespace Eco.Mods.EconAdmin
             if (string.IsNullOrWhiteSpace(accountName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <accountName> [amount]"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the account name, e.g. /eagc gift Exor"));
                 return;
             }
 
