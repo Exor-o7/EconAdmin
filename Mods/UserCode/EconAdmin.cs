@@ -60,8 +60,6 @@ namespace Eco.Mods.EconAdmin
         public void Initialize(TimedTask timer)
         {
             Config = new PluginConfig<EconAdminConfig>("EconAdmin");
-            // Ensure the config file is written to disk on first run
-            Config.SaveConfig();
             UserManager.NewUserJoinedEvent.Add(GrantNewPlayerGift);
             this.status = "Running";
         }
@@ -384,8 +382,8 @@ namespace Eco.Mods.EconAdmin
             }
 
             var holdings = account.CurrencyHoldings
-                .Where(h => h != null && h.Currency != null && h.Val > 0)
-                .OrderByDescending(h => h.Val)
+                .Where(h => h.Key != null && h.Value != null && h.Value.Val > 0)
+                .OrderByDescending(h => h.Value.Val)
                 .ToList();
 
             if (holdings.Count == 0)
@@ -398,7 +396,7 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Holdings ({holdings.Count} currencies):"));
             foreach (var holding in holdings.Take(20))
             {
-                admin.TempServerMessage(Localizer.DoStr($"  • {holding.Val:F2} {holding.Currency.Name}"));
+                admin.TempServerMessage(Localizer.DoStr($"  • {holding.Value.Val:F2} {holding.Key.Name}"));
             }
             if (holdings.Count > 20)
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {holdings.Count - 20} more"));
