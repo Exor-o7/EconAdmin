@@ -4,6 +4,7 @@ A comprehensive admin toolkit for managing currencies and bank accounts on [ECO]
 
 ## Features
 
+### Economy Administration (`/ea`)
 - List all bank accounts and currencies on the server (with numeric IDs for precise targeting)
 - Search/filter accounts and currencies by name or ID
 - Add or deduct currency balances on specific accounts
@@ -11,7 +12,9 @@ A comprehensive admin toolkit for managing currencies and bank accounts on [ECO]
 - Delete a bank account entirely
 - Bulk purge currencies from **all** accounts using wildcard patterns
 - Preview wildcard matches before executing destructive operations
-- Global currency system: create a server-wide currency with a treasury account
+
+### Global Currency Management (`/eagc`)
+- Create a server-wide currency with a treasury account
 - Automatically gift new players a starting balance on first join
 - Configurable welcome popup panel for new players
 - Mint additional funds into the treasury at any time
