@@ -338,14 +338,13 @@ namespace Eco.Mods.EconAdmin
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {holdings.Count - 20} more"));
         }
 
-        [ChatSubCommand("Ea", "Add or remove currency from an account. Use negative amount to remove.", "adjust", ChatAuthorizationLevel.Admin)]
-        public static void Adjust(User admin, string accountName = "", string currencyName = "", float amount = 0)
+        [ChatSubCommand("Ea", "Add currency to an account.", "add", ChatAuthorizationLevel.Admin)]
+        public static void Add(User admin, string accountName = "", string currencyName = "", float amount = 0)
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount == 0)
+            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount <= 0)
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea adjust <accountName> <currencyName> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Note: ECO splits on spaces — use a unique word from the name, not quotes."));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Example: /ea adjust Exor Gold -550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <accountName> <currencyName> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Example: /ea add Exor Gold 550000"));
                 return;
             }
 
@@ -359,8 +358,31 @@ namespace Eco.Mods.EconAdmin
             account.AddCurrency(currency, amount);
             var newBalance = account.GetCurrencyHoldingVal(currency);
 
-            var action = amount >= 0 ? "Added" : "Removed";
-            admin.TempServerMessage(Localizer.DoStr($"[EA] {action} {Math.Abs(amount):F2} {currency.Name}"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Added {amount:F2} {currency.Name}"));
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name} | Before: {currentBalance:F2} → After: {newBalance:F2}"));
+        }
+
+        [ChatSubCommand("Ea", "Deduct currency from an account.", "deduct", ChatAuthorizationLevel.Admin)]
+        public static void Deduct(User admin, string accountName = "", string currencyName = "", float amount = 0)
+        {
+            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount <= 0)
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <accountName> <currencyName> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Example: /ea deduct Exor Gold 550000"));
+                return;
+            }
+
+            var currency = ResolveCurrency(admin, currencyName);
+            if (currency == null) return;
+
+            var account = ResolveAccount(admin, accountName);
+            if (account == null) return;
+
+            var currentBalance = account.GetCurrencyHoldingVal(currency);
+            account.AddCurrency(currency, -amount);
+            var newBalance = account.GetCurrencyHoldingVal(currency);
+
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Deducted {amount:F2} {currency.Name}"));
             admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name} | Before: {currentBalance:F2} → After: {newBalance:F2}"));
         }
 
