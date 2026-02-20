@@ -354,25 +354,26 @@ namespace Eco.Mods.EconAdmin
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {holdings.Count - 20} more"));
         }
 
-        [ChatSubCommand("Ea", "Add currency to an account.", "add", ChatAuthorizationLevel.Admin)]
-        public static void Add(User admin, string accountName = "", string currencyName = "", string amountStr = "")
+        [ChatSubCommand("Ea", "Add currency to an account. Args: <account> <currency> <amount>", "add", ChatAuthorizationLevel.Admin)]
+        public static void Add(User admin, string args = "")
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || string.IsNullOrWhiteSpace(amountStr))
+            var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 3)
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <accountName|id> <currencyName|id> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <account> <currency> <amount>"));
                 admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea add 42 7 550000"));
                 return;
             }
-            if (!float.TryParse(amountStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
+            if (!float.TryParse(parts[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Invalid amount '{amountStr}' — must be a positive number."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Invalid amount '{parts[2]}' — must be a positive number."));
                 return;
             }
 
-            var currency = ResolveCurrency(admin, currencyName);
+            var currency = ResolveCurrency(admin, parts[1]);
             if (currency == null) return;
 
-            var account = ResolveAccount(admin, accountName);
+            var account = ResolveAccount(admin, parts[0]);
             if (account == null) return;
 
             var currentBalance = account.GetCurrencyHoldingVal(currency);
@@ -383,25 +384,26 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name} | Before: {currentBalance:F2} → After: {newBalance:F2}"));
         }
 
-        [ChatSubCommand("Ea", "Deduct currency from an account.", "deduct", ChatAuthorizationLevel.Admin)]
-        public static void Deduct(User admin, string accountName = "", string currencyName = "", string amountStr = "")
+        [ChatSubCommand("Ea", "Deduct currency from an account. Args: <account> <currency> <amount>", "deduct", ChatAuthorizationLevel.Admin)]
+        public static void Deduct(User admin, string args = "")
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || string.IsNullOrWhiteSpace(amountStr))
+            var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 3)
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <accountName|id> <currencyName|id> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <account> <currency> <amount>"));
                 admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea deduct 42 7 550000"));
                 return;
             }
-            if (!float.TryParse(amountStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
+            if (!float.TryParse(parts[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Invalid amount '{amountStr}' — must be a positive number."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Invalid amount '{parts[2]}' — must be a positive number."));
                 return;
             }
 
-            var currency = ResolveCurrency(admin, currencyName);
+            var currency = ResolveCurrency(admin, parts[1]);
             if (currency == null) return;
 
-            var account = ResolveAccount(admin, accountName);
+            var account = ResolveAccount(admin, parts[0]);
             if (account == null) return;
 
             var currentBalance = account.GetCurrencyHoldingVal(currency);
@@ -412,21 +414,21 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name} | Before: {currentBalance:F2} → After: {newBalance:F2}"));
         }
 
-        [ChatSubCommand("Ea", "Remove ALL of a specific currency from one account", "wipe", ChatAuthorizationLevel.Admin)]
-        public static void Wipe(User admin, string accountName = "", string currencyName = "")
+        [ChatSubCommand("Ea", "Remove ALL of a specific currency from one account. Args: <account> <currency>", "wipe", ChatAuthorizationLevel.Admin)]
+        public static void Wipe(User admin, string args = "")
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
+            var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2)
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea wipe <accountName|id> <currencyName>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accts, e.g. /ea wipe 42 Gold"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use currency ID from /ea currencies, e.g. /ea wipe 42 7"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea wipe <account> <currency>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea wipe 42 7"));
                 return;
             }
 
-            var currency = ResolveCurrency(admin, currencyName);
+            var currency = ResolveCurrency(admin, parts[1]);
             if (currency == null) return;
 
-            var account = ResolveAccount(admin, accountName);
+            var account = ResolveAccount(admin, parts[0]);
             if (account == null) return;
 
             var balance = account.GetCurrencyHoldingVal(currency);
@@ -622,13 +624,21 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr("[EA] Done. Use /ea-gc status to verify."));
         }
 
-        [ChatSubCommand("EaGc", "Gift global currency to an account. Defaults to configured gift amount if no amount given.", "gift", ChatAuthorizationLevel.Admin)]
-        public static void Gift(User admin, string accountName = "", int amount = 0)
+        [ChatSubCommand("EaGc", "Gift global currency to an account. Args: <account> [amount]", "gift", ChatAuthorizationLevel.Admin)]
+        public static void Gift(User admin, string args = "")
         {
-            if (string.IsNullOrWhiteSpace(accountName))
+            var parts = (args ?? "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 1 || string.IsNullOrWhiteSpace(parts[0]))
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <accountName|id> [amount]"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <account> [amount]"));
                 admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accts, e.g. /eagc gift 42"));
+                return;
+            }
+
+            int explicitAmount = 0;
+            if (parts.Length >= 2 && !int.TryParse(parts[1], out explicitAmount))
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Invalid amount '{parts[1]}' — must be a whole number."));
                 return;
             }
 
@@ -644,14 +654,14 @@ namespace Eco.Mods.EconAdmin
 
             if (currency == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc create first."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /eagc create first."));
                 return;
             }
 
-            var account = ResolveAccount(admin, accountName);
+            var account = ResolveAccount(admin, parts[0]);
             if (account == null) return;
 
-            int giftAmount = amount > 0 ? amount : cfg.NewPlayerGiftAmount;
+            int giftAmount = explicitAmount > 0 ? explicitAmount : cfg.NewPlayerGiftAmount;
             if (giftAmount <= 0)
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] No amount given and NewPlayerGiftAmount is 0. Provide an explicit amount."));
@@ -663,9 +673,9 @@ namespace Eco.Mods.EconAdmin
         }
 
         [ChatSubCommand("EaGc", "Mint additional global currency directly into the treasury account", "mint", ChatAuthorizationLevel.Admin)]
-        public static void Mint(User admin, int amount = 0)
+        public static void Mint(User admin, string args = "")
         {
-            if (amount <= 0)
+            if (!int.TryParse((args ?? "").Trim(), out int amount) || amount <= 0)
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc mint <amount>  (must be greater than 0)"));
                 return;
