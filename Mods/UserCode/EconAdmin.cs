@@ -114,6 +114,74 @@ namespace Eco.Mods.EconAdmin
                 c.Name.Equals(currencyName, StringComparison.OrdinalIgnoreCase));
         }
 
+        /// <summary>Strip quotes that ECO's parser may leave on tokens when the user types quoted strings</summary>
+        private static string StripQuotes(string s) => s.Trim().Trim('"').Trim();
+
+        /// <summary>
+        /// Resolve a bank account by exact name, then partial/contains match.
+        /// Prints an error or ambiguity message and returns null if unresolved.
+        /// Handles ECO's whitespace-tokenised input by accepting a unique fragment of the name.
+        /// </summary>
+        private static BankAccount? ResolveAccount(User admin, string search)
+        {
+            search = StripQuotes(search);
+            if (string.IsNullOrWhiteSpace(search)) return null;
+
+            var exact = BankAccountManager.Obj.Accounts
+                .FirstOrDefault(a => a != null && a.Name != null &&
+                                     a.Name.Equals(search, StringComparison.OrdinalIgnoreCase));
+            if (exact != null) return exact;
+
+            var matches = BankAccountManager.Obj.Accounts
+                .Where(a => a != null && a.Name != null &&
+                            a.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            if (matches.Count == 0)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] No account found matching '{search}'. Use /ea accounts to search."));
+                return null;
+            }
+            if (matches.Count == 1) return matches[0];
+
+            admin.TempServerMessage(Localizer.DoStr($"[EA] '{search}' matches {matches.Count} accounts — be more specific:"));
+            foreach (var a in matches.Take(10))
+                admin.TempServerMessage(Localizer.DoStr($"  • {a.Name}"));
+            return null;
+        }
+
+        /// <summary>
+        /// Resolve a currency by exact name, then partial/contains match.
+        /// Prints an error or ambiguity message and returns null if unresolved.
+        /// </summary>
+        private static Currency? ResolveCurrency(User admin, string search)
+        {
+            search = StripQuotes(search);
+            if (string.IsNullOrWhiteSpace(search)) return null;
+
+            var exact = CurrencyManager.Currencies
+                .FirstOrDefault(c => c != null && c.Name != null &&
+                                     c.Name.Equals(search, StringComparison.OrdinalIgnoreCase));
+            if (exact != null) return exact;
+
+            var matches = CurrencyManager.Currencies
+                .Where(c => c != null && c.Name != null &&
+                            c.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            if (matches.Count == 0)
+            {
+                admin.TempServerMessage(Localizer.DoStr($"[EA] No currency found matching '{search}'. Use /ea currencies to see all."));
+                return null;
+            }
+            if (matches.Count == 1) return matches[0];
+
+            admin.TempServerMessage(Localizer.DoStr($"[EA] '{search}' matches {matches.Count} currencies — be more specific:"));
+            foreach (var c in matches.Take(10))
+                admin.TempServerMessage(Localizer.DoStr($"  • {c.Name}"));
+            return null;
+        }
+
         /// <summary>Check if a currency name matches a wildcard pattern (* wildcard)</summary>
         private static bool MatchesWildcard(string currencyName, string pattern)
         {
@@ -247,15 +315,8 @@ namespace Eco.Mods.EconAdmin
                 return;
             }
 
-            var account = BankAccountManager.Obj.Accounts
-                .FirstOrDefault(a => a != null && a.Name != null &&
-                                     a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
-
-            if (account == null)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found."));
-                return;
-            }
+            var account = ResolveAccount(admin, accountName);
+            if (account == null) return;
 
             var holdings = account.CurrencyHoldings
                 .Where(h => h.Key != null && h.Value != null && h.Value.Val > 0)
@@ -279,30 +340,18 @@ namespace Eco.Mods.EconAdmin
         [ChatSubCommand("EconAdmin", "Add or remove currency from an account. Use negative amount to remove.", "adjust", ChatAuthorizationLevel.Admin)]
         public static void ModifyAccountCurrency(User admin, string accountName = "", string currencyName = "", float amount = 0)
         {
-            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName) || amount == 0)
+            if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea adjust <accountName> <currencyName> <amount>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use a unique word from the name if it contains spaces, e.g. /ea adjust Exor Gold -550000"));
                 return;
             }
 
-            var currency = GetCurrencyByName(currencyName);
-            if (currency == null)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Currency '{currencyName}' not found."));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Use /ea currencies to see all currencies."));
-                return;
-            }
+            var currency = ResolveCurrency(admin, currencyName);
+            if (currency == null) return;
 
-            var account = BankAccountManager.Obj.Accounts
-                .FirstOrDefault(a => a != null && a.Name != null &&
-                                     a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
-
-            if (account == null)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found."));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Use /ea accounts to search for accounts."));
-                return;
-            }
+            var account = ResolveAccount(admin, accountName);
+            if (account == null) return;
 
             var currentBalance = account.GetCurrencyHoldingVal(currency);
             account.AddCurrency(currency, amount);
@@ -322,22 +371,11 @@ namespace Eco.Mods.EconAdmin
                 return;
             }
 
-            var currency = GetCurrencyByName(currencyName);
-            if (currency == null)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Currency '{currencyName}' not found."));
-                return;
-            }
+            var currency = ResolveCurrency(admin, currencyName);
+            if (currency == null) return;
 
-            var account = BankAccountManager.Obj.Accounts
-                .FirstOrDefault(a => a != null && a.Name != null &&
-                                     a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
-
-            if (account == null)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found."));
-                return;
-            }
+            var account = ResolveAccount(admin, accountName);
+            if (account == null) return;
 
             var balance = account.GetCurrencyHoldingVal(currency);
             if (balance <= 0)
@@ -557,15 +595,8 @@ namespace Eco.Mods.EconAdmin
                 return;
             }
 
-            var account = BankAccountManager.Obj.Accounts
-                .FirstOrDefault(a => a != null && a.Name != null &&
-                                     a.Name.Equals(accountName, StringComparison.OrdinalIgnoreCase));
-
-            if (account == null)
-            {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Account '{accountName}' not found. Use /ea accounts to search."));
-                return;
-            }
+            var account = ResolveAccount(admin, accountName);
+            if (account == null) return;
 
             int giftAmount = amount > 0 ? amount : cfg.NewPlayerGiftAmount;
             if (giftAmount <= 0)
