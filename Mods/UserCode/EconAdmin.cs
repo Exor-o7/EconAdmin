@@ -35,7 +35,7 @@ namespace Eco.Mods.EconAdmin
         [LocDescription("Name of the bank account used as the global currency treasury. Defaults to 'CurrencyName - Treasury' if left empty.")]
         public string TreasuryAccountName { get; set; } = "";
 
-        [LocDescription("Starting balance deposited into the treasury when it is first created via /ea-gc create.")]
+        [LocDescription("Starting balance deposited into the treasury when it is first created via /eagc create.")]
         public int TreasuryInitialBalance { get; set; } = 1000000;
 
         [LocDescription("Title of the popup panel shown to new players receiving a starting gift. Leave empty to skip.")]
@@ -277,7 +277,7 @@ namespace Eco.Mods.EconAdmin
         // ea subcommands
         // ----------------------------
 
-        [ChatSubCommand("Ea", "List all bank accounts (optional: search filter)", "accts", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("Ea", "List all bank accounts (optional: search filter)", "accounts", ChatAuthorizationLevel.Admin)]
         public static void Accounts(User admin, string search = "")
         {
             search = search ?? string.Empty;
@@ -328,7 +328,7 @@ namespace Eco.Mods.EconAdmin
             if (string.IsNullOrWhiteSpace(accountName))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea balance <accountName|id>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accts, e.g. /ea balance 42"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /ea balance 42"));
                 return;
             }
 
@@ -361,7 +361,7 @@ namespace Eco.Mods.EconAdmin
             if (parts.Length < 3)
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea add <account> <currency> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea add 42 7 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accounts and /ea currencies, e.g. /ea add 42 7 550000"));
                 return;
             }
             if (!float.TryParse(parts[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
@@ -391,7 +391,7 @@ namespace Eco.Mods.EconAdmin
             if (parts.Length < 3)
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea deduct <account> <currency> <amount>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea deduct 42 7 550000"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accounts and /ea currencies, e.g. /ea deduct 42 7 550000"));
                 return;
             }
             if (!float.TryParse(parts[2], System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float amount) || amount <= 0)
@@ -421,7 +421,7 @@ namespace Eco.Mods.EconAdmin
             if (parts.Length < 2)
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea wipe <account> <currency>"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accts and /ea currencies, e.g. /ea wipe 42 7"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use IDs from /ea accounts and /ea currencies, e.g. /ea wipe 42 7"));
                 return;
             }
 
@@ -442,9 +442,29 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Wiped {balance:F2} {currency.Name} from '{account.Name}'"));
         }
 
-        [ChatSubCommand("Ea", "Preview currencies matching a wildcard pattern (* wildcard). Ex: /ea preview *Credit", "preview", ChatAuthorizationLevel.Admin)]
-        public static void Preview(User admin, string pattern = "")
+        [ChatSubCommand("Ea", "Delete a bank account by name or ID. DANGER: This is permanent!", "delete", ChatAuthorizationLevel.Admin)]
+        public static void Delete(User admin, string args = "")
         {
+            var search = (args ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea delete <account>"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts to be precise, e.g. /ea delete 42"));
+                return;
+            }
+
+            var account = ResolveAccount(admin, search);
+            if (account == null) return;
+
+            string name = account.Name ?? "(unnamed)";
+            BankAccountManager.DeleteAccount(admin, account);
+            admin.TempServerMessage(Localizer.DoStr($"[EA] Deleted account '{name}'"));
+        }
+
+        [ChatSubCommand("Ea", "Preview currencies matching a wildcard pattern (* wildcard). Ex: /ea preview *Credit", "preview", ChatAuthorizationLevel.Admin)]
+        public static void Preview(User admin, string args = "")
+        {
+            var pattern = (args ?? "").Trim();
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea preview <pattern>  (use * as wildcard, e.g. *Credit)"));
@@ -468,8 +488,9 @@ namespace Eco.Mods.EconAdmin
         }
 
         [ChatSubCommand("Ea", "DANGER: Remove matching currencies from ALL accounts. Preview first with /ea preview!", "purge", ChatAuthorizationLevel.Admin)]
-        public static void Purge(User admin, string pattern = "")
+        public static void Purge(User admin, string args = "")
         {
+            var pattern = (args ?? "").Trim();
             if (string.IsNullOrWhiteSpace(pattern))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea purge <pattern>  (use * as wildcard — run /ea preview first!)"));
@@ -546,7 +567,7 @@ namespace Eco.Mods.EconAdmin
             var currency = CurrencyManager.Currencies
                 .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
 
-            string currencyStatus = currency != null ? "Found" : "Not created yet — run /ea-gc create";
+                string currencyStatus = currency != null ? "Found" : "Not created yet — run /eagc create";
             string treasuryName = EconAdminPlugin.ResolveTreasuryName(cfg);
 
             var treasury = BankAccountManager.Obj.Accounts
@@ -557,7 +578,7 @@ namespace Eco.Mods.EconAdmin
                 ? treasury.GetCurrencyHoldingVal(currency).ToString("F2") : "N/A";
             string treasuryStatus = treasury != null
                 ? $"Found | Balance: {treasuryBalance}"
-                : "Not created yet — run /ea-gc create";
+                : "Not created yet — run /eagc create";
 
             admin.TempServerMessage(Localizer.DoStr("[EA] === Global Currency Status ==="));
             admin.TempServerMessage(Localizer.DoStr($"[EA] Currency Name:   {cfg.GlobalCurrencyName}"));
@@ -621,7 +642,7 @@ namespace Eco.Mods.EconAdmin
             else
                 admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' already exists."));
 
-            admin.TempServerMessage(Localizer.DoStr("[EA] Done. Use /ea-gc status to verify."));
+            admin.TempServerMessage(Localizer.DoStr("[EA] Done. Use /eagc status to verify."));
         }
 
         [ChatSubCommand("EaGc", "Gift global currency to an account. Args: <account> [amount]", "gift", ChatAuthorizationLevel.Admin)]
@@ -631,7 +652,7 @@ namespace Eco.Mods.EconAdmin
             if (parts.Length < 1 || string.IsNullOrWhiteSpace(parts[0]))
             {
                 admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <account> [amount]"));
-                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accts, e.g. /eagc gift 42"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Tip: use account ID from /ea accounts, e.g. /eagc gift 42"));
                 return;
             }
 
