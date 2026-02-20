@@ -1,6 +1,6 @@
 // EconAdmin
 // A comprehensive admin toolkit for managing currencies and bank accounts on ECO servers
-// Author: Exor
+// Author: Exor-o7
 // Features: Currency/account listing, bulk operations, wildcard pattern matching, global currency management
 
 using Eco.Core.Plugins;
@@ -35,7 +35,7 @@ namespace Eco.Mods.EconAdmin
         [LocDescription("Name of the bank account used as the global currency treasury. Defaults to 'CurrencyName - Treasury' if left empty.")]
         public string TreasuryAccountName { get; set; } = "";
 
-        [LocDescription("Starting balance deposited into the treasury when it is first created via /ea-gc-setup.")]
+        [LocDescription("Starting balance deposited into the treasury when it is first created via /ea-gc create.")]
         public int TreasuryInitialBalance { get; set; } = 1000000;
 
         [LocDescription("Title of the popup panel shown to new players receiving a starting gift. Leave empty to skip.")]
@@ -424,7 +424,7 @@ namespace Eco.Mods.EconAdmin
             var currency = CurrencyManager.Currencies
                 .FirstOrDefault(c => c != null && c.Name.Equals(cfg.GlobalCurrencyName, StringComparison.OrdinalIgnoreCase));
 
-            string currencyStatus = currency != null ? "Found" : "Not created yet — run /ea-gc setup";
+            string currencyStatus = currency != null ? "Found" : "Not created yet — run /ea-gc create";
             string treasuryName = EconAdminPlugin.ResolveTreasuryName(cfg);
 
             var treasury = BankAccountManager.Obj.Accounts
@@ -435,7 +435,7 @@ namespace Eco.Mods.EconAdmin
                 ? treasury.GetCurrencyHoldingVal(currency).ToString("F2") : "N/A";
             string treasuryStatus = treasury != null
                 ? $"Found | Balance: {treasuryBalance}"
-                : "Not created yet — run /ea-gc setup";
+                : "Not created yet — run /ea-gc create";
 
             admin.TempServerMessage(Localizer.DoStr("[EA] === Global Currency Status ==="));
             admin.TempServerMessage(Localizer.DoStr($"[EA] Currency Name:   {cfg.GlobalCurrencyName}"));
@@ -444,7 +444,7 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] New Player Gift: {(cfg.NewPlayerGiftAmount > 0 ? cfg.NewPlayerGiftAmount.ToString("N0") : "Disabled")}"));
         }
 
-        [ChatSubCommand("EconAdminGC", "Create the global currency and treasury account defined in config", "setup", ChatAuthorizationLevel.Admin)]
+        [ChatSubCommand("EconAdminGC", "Create the global currency and treasury account defined in config", "create", ChatAuthorizationLevel.Admin)]
         public static void SetupGlobalCurrency(User admin)
         {
             var cfg = EconAdminPlugin.Config?.Config;
@@ -499,7 +499,7 @@ namespace Eco.Mods.EconAdmin
             else
                 admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' already exists."));
 
-            admin.TempServerMessage(Localizer.DoStr("[EA] Setup complete. Use /ea-gc status to verify."));
+            admin.TempServerMessage(Localizer.DoStr("[EA] Done. Use /ea-gc status to verify."));
         }
 
         [ChatSubCommand("EconAdminGC", "Gift global currency to an account. Defaults to configured gift amount if no amount given.", "gift", ChatAuthorizationLevel.Admin)]
@@ -517,7 +517,7 @@ namespace Eco.Mods.EconAdmin
 
             if (currency == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc setup first."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc create first."));
                 return;
             }
 
@@ -557,7 +557,7 @@ namespace Eco.Mods.EconAdmin
 
             if (currency == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc setup first."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Global currency '{cfg.GlobalCurrencyName}' not found. Run /ea-gc create first."));
                 return;
             }
 
@@ -568,7 +568,7 @@ namespace Eco.Mods.EconAdmin
 
             if (treasury == null)
             {
-                admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' not found. Run /ea-gc setup first."));
+                admin.TempServerMessage(Localizer.DoStr($"[EA] Treasury '{treasuryName}' not found. Run /ea-gc create first."));
                 return;
             }
 

@@ -56,7 +56,7 @@ All commands are grouped under two master commands:
 | Command | Description |
 |---|---|
 | `/ea-gc status` | Show global currency config and treasury status |
-| `/ea-gc setup` | Create the global currency and treasury from config |
+| `/ea-gc create` | Create the global currency and treasury from config |
 | `/ea-gc gift <account> [amount]` | Gift global currency to an account (defaults to configured gift amount) |
 | `/ea-gc mint <amount>` | Mint additional global currency into the treasury |
 
@@ -93,10 +93,10 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
    | `GlobalCurrencyName` | Name of your server's global currency |
    | `TreasuryAccountName` | Name of the treasury bank account. Leave empty to default to `CurrencyName - Treasury` |
    | `NewPlayerGiftAmount` | Amount gifted to new players on first join. Set to `0` to disable |
-   | `TreasuryInitialBalance` | Funds seeded into the treasury when created via `/ea-gc-setup` |
+   | `TreasuryInitialBalance` | Funds seeded into the treasury when created via `/ea-gc create` |
    | `WelcomePanelTitle` | Title of the welcome popup. Leave empty to skip |
    | `WelcomePanelBody` | Body of the welcome popup. Use `$Amount` as a placeholder for the gift value |
-2. Place the files on the server and run `/ea-gc setup` in-game to create the currency and treasury.
+2. Place the files on the server and run `/ea-gc create` in-game to create the currency and treasury.
 3. Use `/ea-gc status` to verify everything is running.
 
 > If you are migrating from the GlobalCurrency mod, your existing `CurrencyName - Treasury` account will be recognized automatically.
@@ -110,8 +110,8 @@ The `ea-preview` and `ea-purge` commands support `*` as a wildcard:
 /ea adjust "PlayerName's Account" Credits 500
 /ea preview *OldCoin*
 /ea purge *OldCoin*
+/ea-gc create
 /ea-gc status
-/ea-gc setup
 /ea-gc gift "PlayerName's Account" 250
 /ea-gc mint 50000
 ```
