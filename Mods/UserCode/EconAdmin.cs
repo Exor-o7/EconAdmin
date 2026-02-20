@@ -101,7 +101,7 @@ namespace Eco.Mods.EconAdmin
     }
 
     [ChatCommandHandler]
-    public class EconAdminCommands
+    public static class EconAdminCommands
     {
         // ----------------------------
         // Helper Methods
@@ -250,18 +250,18 @@ namespace Eco.Mods.EconAdmin
         // Master Commands
         // ----------------------------
 
-        [ChatCommand("EconAdmin", "ea")]
-        public static void EconAdmin() { }
+        [ChatCommand("Economy administration toolkit")]
+        public static void Ea(User user) { }
 
-        [ChatCommand("EconAdminGC", "ea-gc")]
-        public static void EconAdminGC() { }
+        [ChatCommand("Global currency management")]
+        public static void EaGc(User user) { }
 
         // ----------------------------
         // ea subcommands
         // ----------------------------
 
-        [ChatSubCommand("EconAdmin", "List all bank accounts (optional: search filter)", "accounts", ChatAuthorizationLevel.Admin)]
-        public static void ListAccounts(User admin, string search = "")
+        [ChatSubCommand("Ea", "List all bank accounts (optional: search filter)", "accounts", ChatAuthorizationLevel.Admin)]
+        public static void Accounts(User admin, string search = "")
         {
             search = search ?? string.Empty;
 
@@ -284,8 +284,8 @@ namespace Eco.Mods.EconAdmin
                 admin.TempServerMessage(Localizer.DoStr($"  • {accountName}"));
         }
 
-        [ChatSubCommand("EconAdmin", "List all currencies in the system (optional: filter)", "currencies", ChatAuthorizationLevel.Admin)]
-        public static void ListAllCurrencies(User admin, string filter = "")
+        [ChatSubCommand("Ea", "List all currencies in the system (optional: filter)", "currencies", ChatAuthorizationLevel.Admin)]
+        public static void Currencies(User admin, string filter = "")
         {
             var currencies = CurrencyManager.Currencies
                 .Where(c => c != null && c.Name != null &&
@@ -306,8 +306,8 @@ namespace Eco.Mods.EconAdmin
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {currencies.Count - 100} more"));
         }
 
-        [ChatSubCommand("EconAdmin", "Show all currency holdings for an account", "balance", ChatAuthorizationLevel.Admin)]
-        public static void GetAccountBalance(User admin, string accountName = "")
+        [ChatSubCommand("Ea", "Show all currency holdings for an account", "balance", ChatAuthorizationLevel.Admin)]
+        public static void Balance(User admin, string accountName = "")
         {
             if (string.IsNullOrWhiteSpace(accountName))
             {
@@ -337,8 +337,8 @@ namespace Eco.Mods.EconAdmin
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {holdings.Count - 20} more"));
         }
 
-        [ChatSubCommand("EconAdmin", "Add or remove currency from an account. Use negative amount to remove.", "adjust", ChatAuthorizationLevel.Admin)]
-        public static void ModifyAccountCurrency(User admin, string accountName = "", string currencyName = "", float amount = 0)
+        [ChatSubCommand("Ea", "Add or remove currency from an account. Use negative amount to remove.", "adjust", ChatAuthorizationLevel.Admin)]
+        public static void Adjust(User admin, string accountName = "", string currencyName = "", float amount = 0)
         {
             if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
             {
@@ -362,8 +362,8 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Account: {account.Name} | Before: {currentBalance:F2} → After: {newBalance:F2}"));
         }
 
-        [ChatSubCommand("EconAdmin", "Remove ALL of a specific currency from one account", "wipe", ChatAuthorizationLevel.Admin)]
-        public static void WipeCurrencyFromAccount(User admin, string accountName = "", string currencyName = "")
+        [ChatSubCommand("Ea", "Remove ALL of a specific currency from one account", "wipe", ChatAuthorizationLevel.Admin)]
+        public static void Wipe(User admin, string accountName = "", string currencyName = "")
         {
             if (string.IsNullOrWhiteSpace(accountName) || string.IsNullOrWhiteSpace(currencyName))
             {
@@ -388,8 +388,8 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Wiped {balance:F2} {currency.Name} from '{account.Name}'"));
         }
 
-        [ChatSubCommand("EconAdmin", "Preview currencies matching a wildcard pattern (* wildcard). Ex: /ea preview *Credit", "preview", ChatAuthorizationLevel.Admin)]
-        public static void PreviewCurrencyPattern(User admin, string pattern = "")
+        [ChatSubCommand("Ea", "Preview currencies matching a wildcard pattern (* wildcard). Ex: /ea preview *Credit", "preview", ChatAuthorizationLevel.Admin)]
+        public static void Preview(User admin, string pattern = "")
         {
             if (string.IsNullOrWhiteSpace(pattern))
             {
@@ -413,8 +413,8 @@ namespace Eco.Mods.EconAdmin
                 admin.TempServerMessage(Localizer.DoStr($"  ... and {currencies.Count - 30} more"));
         }
 
-        [ChatSubCommand("EconAdmin", "DANGER: Remove matching currencies from ALL accounts. Preview first with /ea preview!", "purge", ChatAuthorizationLevel.Admin)]
-        public static void PurgeCurrencies(User admin, string pattern = "")
+        [ChatSubCommand("Ea", "DANGER: Remove matching currencies from ALL accounts. Preview first with /ea preview!", "purge", ChatAuthorizationLevel.Admin)]
+        public static void Purge(User admin, string pattern = "")
         {
             if (string.IsNullOrWhiteSpace(pattern))
             {
@@ -473,8 +473,8 @@ namespace Eco.Mods.EconAdmin
         // ea-gc subcommands
         // ----------------------------
 
-        [ChatSubCommand("EconAdminGC", "Show global currency config and treasury status", "status", ChatAuthorizationLevel.Admin)]
-        public static void GlobalCurrencyStatus(User admin)
+        [ChatSubCommand("EaGc", "Show global currency config and treasury status", "status", ChatAuthorizationLevel.Admin)]
+        public static void Status(User admin)
         {
             var cfg = EconAdminPlugin.Config?.Config;
             if (cfg == null)
@@ -512,8 +512,8 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] New Player Gift: {(cfg.NewPlayerGiftAmount > 0 ? cfg.NewPlayerGiftAmount.ToString("N0") : "Disabled")}"));
         }
 
-        [ChatSubCommand("EconAdminGC", "Create the global currency and treasury account defined in config", "create", ChatAuthorizationLevel.Admin)]
-        public static void SetupGlobalCurrency(User admin)
+        [ChatSubCommand("EaGc", "Create the global currency and treasury account defined in config", "create", ChatAuthorizationLevel.Admin)]
+        public static void Create(User admin)
         {
             var cfg = EconAdminPlugin.Config?.Config;
             if (cfg == null)
@@ -570,12 +570,12 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr("[EA] Done. Use /ea-gc status to verify."));
         }
 
-        [ChatSubCommand("EconAdminGC", "Gift global currency to an account. Defaults to configured gift amount if no amount given.", "gift", ChatAuthorizationLevel.Admin)]
-        public static void GiftGlobalCurrency(User admin, string accountName = "", int amount = 0)
+        [ChatSubCommand("EaGc", "Gift global currency to an account. Defaults to configured gift amount if no amount given.", "gift", ChatAuthorizationLevel.Admin)]
+        public static void Gift(User admin, string accountName = "", int amount = 0)
         {
             if (string.IsNullOrWhiteSpace(accountName))
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea-gc gift <accountName> [amount]"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc gift <accountName> [amount]"));
                 return;
             }
 
@@ -609,12 +609,12 @@ namespace Eco.Mods.EconAdmin
             admin.TempServerMessage(Localizer.DoStr($"[EA] Gifted {giftAmount:N0} {cfg.GlobalCurrencyName} to '{account.Name}'"));
         }
 
-        [ChatSubCommand("EconAdminGC", "Mint additional global currency directly into the treasury account", "mint", ChatAuthorizationLevel.Admin)]
-        public static void MintToTreasury(User admin, int amount = 0)
+        [ChatSubCommand("EaGc", "Mint additional global currency directly into the treasury account", "mint", ChatAuthorizationLevel.Admin)]
+        public static void Mint(User admin, int amount = 0)
         {
             if (amount <= 0)
             {
-                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /ea-gc mint <amount>  (must be greater than 0)"));
+                admin.TempServerMessage(Localizer.DoStr("[EA] Usage: /eagc mint <amount>  (must be greater than 0)"));
                 return;
             }
 
