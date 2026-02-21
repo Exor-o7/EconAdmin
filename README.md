@@ -32,7 +32,7 @@ ServerRoot/
         └── EconAdmin.cs        ← mod file
 ```
 
-1. Copy `Configs/EconAdmin.eco.template` → your server's `Configs/` folder and **rename it to `EconAdmin.eco`**.
+1. Copy `Configs/EconAdmin.eco.template` → your server's `Configs/` folder and **make a copy of it and rename to `EconAdmin.eco`**.
    > Alternatively, skip this step — the server will auto-generate `EconAdmin.eco` with default values on first start.
 2. Copy `Mods/UserCode/EconAdmin.cs` → your server's `Mods/UserCode/` folder.
 3. Edit `Configs/EconAdmin.eco` with your desired settings (see Global Currency Setup below).
@@ -139,3 +139,4 @@ The `/ea preview` and `/ea purge` commands support `*` as a wildcard:
 ## License
 
 MIT — see [LICENSE](LICENSE)
+
